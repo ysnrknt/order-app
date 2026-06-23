@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>守備適性・オーダー作成アプリ</title>
+<style>
+:root{
+  --bg:#151515;
+  --panel:#2b2b2b;
+  --line:#505050;
+  --text:#ffffff;
+  --muted:#c8c8c8;
+  --blue:#0b66ff;
+  --danger:#d33;
+  --grade-a:#ff4d8d;
+  --grade-b:#ff9900;
+  --grade-c:#ffd700;
+  --grade-d:#4aa3ff;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html{
+  -webkit-text-size-adjust:100%;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "YuGothic", Meiryo, sans-serif;
+}
+
+.app{
+  display:flex;
+  gap:16px;
+  padding:16px;
+  align-items:flex-start;
+}
+
+.side{
+  width:360px;
+  flex-shrink:0;
+}
+
+.box{
+  background:var(--panel);
+  padding:14px;
+  border-radius:14px;
+  margin-bottom:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.22);
+}
+
+h1{
+  margin:0 0 12px;
+  font-size:22px;
+  line-height:1.25;
+}
+
+h2{
+  margin:0 0 10px;
+  font-size:18px;
+  line-height:1.3;
+}
+
+.small{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.45;
+  margin:6px 0 0;
+}
+
+input,
+select,
+button{
+  width:100%;
+  min-height:42px;
+  box-sizing:border-box;
+  margin:4px 0;
+  padding:8px 10px;
+  font-size:16px;
+  border-radius:9px;
+}
+
+input,
+select{
+  border:1px solid #666;
+  background:#1f1f1f;
+  color:#fff;
+}
+
+button{
+  border:none;
+  background:var(--blue);
+  color:white;
+  font-weight:700;
+  cursor:pointer;
+}
+
+button:active{
+  transform:translateY(1px);
+}
+
+button:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+  transform:none;
+}
+
+button.sub{
+  background:#555;
+}
+
+button.danger{
+  background:var(--danger);
+}
+
+button.row-btn{
+  width:auto;
+  flex:1;
+}
+
+button.mini{
+  width:54px;
+  min-height:38px;
+  margin:0;
+  padding:6px 8px;
+  border-radius:8px;
+  font-size:15px;
+}
+
+.button-row{
+  display:flex;
+  gap:8px;
+}
+
+.tab-row{
+  display:flex;
+  gap:8px;
+}
+
+.tab-button{
+  width:auto;
+  flex:1;
+  background:#555;
+}
+
+.tab-button.active{
+  background:var(--blue);
+}
+
+.view-hidden{
+  display:none !important;
+}
+
+.player-toolbar{
+  display:flex;
+  gap:8px;
+  margin-bottom:8px;
+}
+
+.player-toolbar input{
+  margin:0;
+}
+
+.player-count{
+  color:var(--muted);
+  font-size:13px;
+  margin-bottom:8px;
+}
+
+.player-list{
+  max-height:360px;
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#232323;
+}
+
+.player{
+  padding:10px 11px;
+  border-bottom:1px solid #444;
+  cursor:pointer;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.player:last-child{
+  border-bottom:none;
+}
+
+.player:hover{
+  background:#3c3c3c;
+}
+
+.player.selected{
+  background:#0b66ff;
+}
+
+.player.in-order:not(.selected){
+  background:#303030;
+}
+
+.player-number{
+  flex:0 0 48px;
+  color:#e8e8e8;
+  font-weight:700;
+}
+
+.player-name{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  flex:1;
+}
+
+.order-chip{
+  flex:0 0 auto;
+  padding:2px 7px;
+  border-radius:999px;
+  background:#111;
+  color:#ddd;
+  border:1px solid #666;
+  font-size:12px;
+  font-weight:800;
+}
+
+.player-check{
+  flex:0 0 auto;
+  width:22px;
+  height:22px;
+  min-height:22px;
+  margin:0;
+  padding:0;
+  cursor:pointer;
+  accent-color:var(--blue);
+}
+
+.order-side-actions{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.order-side-actions button{
+  margin:0;
+}
+
+
+.form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin:8px 0;
+}
+
+.form-grid label{
+  font-size:13px;
+  color:#ddd;
+}
+
+.form-grid select{
+  margin-top:3px;
+}
+
+.field-area{
+  flex:1;
+  min-width:0;
+}
+
+.current-player{
+  background:var(--panel);
+  border-radius:14px;
+  padding:12px 14px;
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.current-player-main{
+  font-size:20px;
+  font-weight:800;
+  line-height:1.25;
+}
+
+.current-player-sub{
+  color:var(--muted);
+  font-size:13px;
+  margin-top:2px;
+}
+
+.legend{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  font-size:12px;
+  color:#ddd;
+}
+
+.legend-dot{
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid white;
+  font-size:13px;
+  font-weight:800;
+}
+
+.field-wrap{
+  width:100%;
+  overflow:auto;
+  border-radius:16px;
+  background:#0e2341;
+  box-shadow:0 2px 14px rgba(0,0,0,.35);
+}
+
+.field{
+  position:relative;
+  width:100%;
+  max-width:1100px;
+  aspect-ratio:3/2;
+  margin:0 auto;
+  overflow:hidden;
+  background:#196a37;
+}
+
+.field-svg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  pointer-events:none;
+  user-select:none;
+}
+
+.badge{
+  position:absolute;
+  width:clamp(30px, 7%, 66px);
+  aspect-ratio:1/1;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:clamp(18px, 3.5vw, 42px);
+  font-weight:900;
+  border:3px solid white;
+  transform:translate(-50%, -50%);
+  box-shadow:0 2px 10px rgba(0,0,0,.65);
+  cursor:pointer;
+  user-select:none;
+  touch-action:manipulation;
+}
+
+.badge:hover{
+  filter:brightness(1.08);
+}
+
+.badge-label{
+  position:absolute;
+  top:100%;
+  left:50%;
+  transform:translateX(-50%);
+  margin-top:2px;
+  padding:1px 5px;
+  border-radius:999px;
+  background:rgba(0,0,0,.62);
+  color:#fff;
+  font-size:clamp(9px, 1.3vw, 12px);
+  font-weight:800;
+  white-space:nowrap;
+  line-height:1.5;
+}
+
+.grade-a{ background:var(--grade-a); color:white; }
+.grade-b{ background:var(--grade-b); color:white; }
+.grade-c{ background:var(--grade-c); color:black; }
+.grade-d{ background:var(--grade-d); color:white; }
+
+.empty{
+  padding:12px;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+.order-panel{
+  background:var(--panel);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.22);
+}
+
+.order-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:10px;
+}
+
+.order-title{
+  font-size:22px;
+  font-weight:900;
+  line-height:1.25;
+}
+
+.order-summary{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.45;
+  margin-top:4px;
+}
+
+.order-actions{
+  display:flex;
+  gap:8px;
+  flex:0 0 520px;
+  flex-wrap:wrap;
+}
+
+.order-actions button{
+  width:auto;
+  flex:1;
+  min-width:110px;
+  margin:0;
+}
+
+.order-warnings{
+  margin:8px 0 10px;
+  color:#ffd36a;
+  font-size:13px;
+  line-height:1.45;
+}
+
+.order-list{
+  border:1px solid var(--line);
+  border-radius:12px;
+  overflow:hidden;
+  background:#202020;
+}
+
+.order-head,
+.order-row{
+  display:grid;
+  grid-template-columns:54px 96px minmax(0, 1fr) 210px;
+  gap:8px;
+  align-items:center;
+}
+
+.order-head{
+  padding:9px 10px;
+  background:#191919;
+  color:#ddd;
+  font-size:13px;
+  font-weight:800;
+  border-bottom:1px solid #444;
+}
+
+.order-row{
+  padding:9px 10px;
+  border-bottom:1px solid #444;
+}
+
+.order-row:last-child{
+  border-bottom:none;
+}
+
+.order-row.position-duplicate{
+  background:rgba(255, 211, 106, .08);
+}
+
+
+.order-no{
+  font-size:20px;
+  font-weight:900;
+  text-align:center;
+}
+
+.order-no-button{
+  width:100%;
+  min-height:42px;
+  margin:0;
+  padding:7px 8px;
+  border-radius:10px;
+  background:#111;
+  border:2px solid #777;
+  color:#fff;
+  font-size:20px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.order-no-button:hover{
+  filter:brightness(1.15);
+}
+
+.order-no-button.order-swap-selected{
+  background:var(--blue);
+  border-color:#fff;
+  box-shadow:0 0 0 3px rgba(255,255,255,.2);
+}
+
+.order-row.order-swap-source{
+  background:rgba(11,102,255,.16);
+}
+
+.order-position-select{
+  margin:0;
+  min-height:38px;
+  font-size:15px;
+}
+
+.order-position-button{
+  margin:0;
+  min-height:42px;
+  padding:7px 8px;
+  border-radius:10px;
+  background:#111;
+  border:2px solid #777;
+  color:#fff;
+  font-size:20px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.order-position-button:hover{
+  filter:brightness(1.15);
+}
+
+.order-position-button.swap-selected{
+  background:var(--blue);
+  border-color:#fff;
+  box-shadow:0 0 0 3px rgba(255,255,255,.2);
+}
+
+.order-row.swap-source{
+  background:rgba(11,102,255,.16);
+}
+
+.order-player-main{
+  min-width:0;
+}
+
+.order-name{
+  font-size:18px;
+  font-weight:900;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.order-name.name-grade-a{ color:var(--grade-a); }
+.order-name.name-grade-b{ color:var(--grade-b); }
+.order-name.name-grade-c{ color:var(--grade-c); }
+.order-name.name-grade-d{ color:var(--grade-d); }
+
+.order-player-sub{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:2px;
+}
+
+.order-row-buttons{
+  display:flex;
+  gap:6px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+.youtube-box{
+  display:none;
+  margin:8px 0 10px;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#191919;
+}
+
+.youtube-box.active{
+  display:block;
+}
+
+.youtube-meta{
+  color:#ddd;
+  font-size:13px;
+  font-weight:800;
+  line-height:1.45;
+  margin-bottom:8px;
+}
+
+.youtube-frame-wrap{
+  width:100%;
+  max-width:420px;
+  aspect-ratio:16/9;
+  background:#000;
+  border-radius:10px;
+  overflow:hidden;
+  margin-bottom:8px;
+}
+
+.youtube-frame-wrap iframe{
+  width:100%;
+  height:100%;
+  border:0;
+}
+.youtube-fallback{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top:8px;
+}
+
+.youtube-fallback a{
+  color:#9ec3ff;
+  font-size:13px;
+  font-weight:800;
+}
+
+.youtube-note{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.45;
+  margin-top:6px;
+}
+
+
+@media(max-width:900px){
+  .app{
+    flex-direction:column;
+    padding:10px;
+    gap:10px;
+  }
+
+  .side{
+    width:100%;
+  }
+
+  .field-area{
+    width:100%;
+  }
+
+  .current-player{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .legend{
+    justify-content:flex-start;
+  }
+
+  .player-list{
+    max-height:260px;
+  }
+
+  .badge{
+    border-width:2px;
+  }
+
+  .order-top{
+    flex-direction:column;
+  }
+
+  .order-actions{
+    flex:0 0 auto;
+    width:100%;
+  }
+}
+
+@media(max-width:640px){
+  .order-head{
+    display:none;
+  }
+
+  .order-row{
+    grid-template-columns:42px 78px minmax(0, 1fr);
+    gap:7px;
+    align-items:center;
+  }
+
+  .order-row-buttons{
+    grid-column:1 / -1;
+    justify-content:flex-end;
+  }
+
+  button.mini{
+    width:54px;
+  }
+}
+
+@media(max-width:520px){
+  .form-grid{
+    grid-template-columns:1fr 1fr 1fr;
+    gap:6px;
+  }
+
+  .box{
+    padding:12px;
+  }
+
+  h1{
+    font-size:20px;
+  }
+
+  h2{
+    font-size:17px;
+  }
+
+  .order-title{
+    font-size:20px;
+  }
+
+  .order-name{
+    font-size:16px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="side">
+    <div class="box">
+      <h1>守備適性・オーダー作成アプリ</h1>
+      <p class="small">選手管理、守備適性表示、打順作成をこの画面で行います。</p>
+    </div>
+
+    <div class="box">
+      <h2>画面</h2>
+      <div class="tab-row">
+        <button type="button" id="tabDefense" class="tab-button active" onclick="setView('defense')">守備適性</button>
+        <button type="button" id="tabOrder" class="tab-button" onclick="setView('order')">オーダー作成</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>CSV取り込み</h2>
+      <input type="file" id="csvFile" accept=".csv,text/csv">
+      <button type="button" onclick="importCsv()">CSVを読み込む</button>
+      <button type="button" class="sub" onclick="exportCsv()">現在のデータをCSV出力</button>
+      <p class="small">読み込み時は現在の選手一覧を置き換えます。余分な列は無視します。</p>
+    </div>
+
+    <div class="box">
+      <h2>選手一覧</h2>
+      <div class="player-toolbar">
+        <input id="searchText" placeholder="名前・背番号で検索" oninput="renderList()">
+      </div>
+      <div id="playerCount" class="player-count"></div>
+      <div id="playerList" class="player-list"></div>
+    </div>
+
+    <div class="box" id="playerFormBox">
+      <h2 id="formTitle">選手追加</h2>
+
+      <input id="name" placeholder="名前">
+      <input id="number" placeholder="背番号" inputmode="numeric">
+
+      <div class="form-grid" id="positionInputs"></div>
+
+      <button type="button" onclick="saveForm()">保存</button>
+      <div class="button-row">
+        <button type="button" class="sub row-btn" onclick="clearForm()">新規入力</button>
+        <button type="button" class="danger row-btn" onclick="deleteSelected()">削除</button>
+      </div>
+    </div>
+
+  </aside>
+
+  <main class="field-area">
+    <section id="defenseView">
+      <div class="current-player">
+        <div>
+          <div id="currentPlayer" class="current-player-main">選手未選択</div>
+          <div id="currentPlayerSub" class="current-player-sub">CSVを読み込むか、選手を追加してください。</div>
+        </div>
+        <div class="legend" aria-label="凡例">
+          <div class="legend-item"><span class="legend-dot grade-a">A</span></div>
+          <div class="legend-item"><span class="legend-dot grade-b">B</span></div>
+          <div class="legend-item"><span class="legend-dot grade-c">C</span></div>
+          <div class="legend-item"><span class="legend-dot grade-d">D</span></div>
+        </div>
+      </div>
+
+      <div class="field-wrap">
+        <div class="field" id="field" aria-label="野球場">
+          <svg class="field-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <polygon points="50,88 34.7,65 50,42 65.3,65" fill="rgba(194,139,78,0.78)" stroke="#ead2a6" stroke-width="0.55"/>
+            <line x1="50" y1="88" x2="0" y2="12.8" stroke="#f3ead3" stroke-width="0.9" opacity="0.95"/>
+            <line x1="50" y1="88" x2="100" y2="12.8" stroke="#f3ead3" stroke-width="0.9" opacity="0.95"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="orderView" class="view-hidden">
+      <div class="order-panel">
+        <div class="order-top">
+          <div>
+            <div class="order-title">本日のオーダー</div>
+            <div id="orderSummary" class="order-summary">打線 0/18人</div>
+          </div>
+          <div class="order-actions">
+            <button type="button" onclick="addCheckedToOrder()">チェック追加</button>
+            <button type="button" class="sub" onclick="addSelectedToOrder()">選手追加</button>
+            <button type="button" class="sub" onclick="autoAssignAllOrder()">自動配置</button>
+            <button type="button" class="sub" onclick="clearOrder()">クリア</button>
+          </div>
+        </div>
+
+        <div id="orderWarnings" class="order-warnings"></div>
+        <div id="youtubeBox" class="youtube-box">
+          <div id="youtubeMeta" class="youtube-meta"></div>
+          <div id="youtubePlayerArea"></div>
+          <button type="button" class="sub" onclick="stopYouTubePreview()">停止</button>
+        </div>
+        <div id="orderList" class="order-list"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const STORAGE_KEY = "players";
+const ORDER_STORAGE_KEY = "battingOrder";
+const GRADES = ["A", "B", "C", "D"];
+const MAX_ORDER = 18;
+
+const POSITIONS = [
+  { id:"P",  short:"投", label:"ピッチャー", csv:["ピッチャー", "投手", "投", "P"], top:"60%", left:"50%" },
+  { id:"C",  short:"捕", label:"キャッチャー", csv:["キャッチャー", "捕手", "捕", "C"], top:"88%", left:"50%" },
+  { id:"1B", short:"一", label:"ファースト", csv:["ファースト", "一塁手", "一塁", "一", "1B"], top:"58%", left:"73%" },
+  { id:"2B", short:"二", label:"セカンド", csv:["セカンド", "二塁手", "二塁", "二", "2B"], top:"42%", left:"61%" },
+  { id:"3B", short:"三", label:"サード", csv:["サード", "三塁手", "三塁", "三", "3B"], top:"58%", left:"27%" },
+  { id:"SS", short:"遊", label:"ショート", csv:["ショート", "遊撃手", "遊撃", "遊", "SS"], top:"42%", left:"39%" },
+  { id:"LF", short:"左", label:"レフト", csv:["レフト", "左翼手", "左翼", "左", "LF"], top:"28%", left:"25%" },
+  { id:"CF", short:"中", label:"センター", csv:["センター", "中堅手", "中堅", "中", "CF"], top:"16%", left:"50%" },
+  { id:"RF", short:"右", label:"ライト", csv:["ライト", "右翼手", "右翼", "右", "RF"], top:"28%", left:"75%" }
+];
+
+const ORDER_POSITIONS = [
+  { id:"DH", short:"DH", label:"指名打者" },
+  ...POSITIONS
+];
+
+let players = loadPlayers();
+let order = loadOrder();
+let checkedPlayerIds = new Set();
+let selectedIndex = null;
+let pendingSwapIndex = null;
+let pendingBattingSwapIndex = null;
+let currentView = "defense";
+let youtubeStopTimer = null;
+let youtubePopup = null;
+
+if(players.length > 0){
+  savePlayers();
+}
+
+function generatePlayerId(){
+  const random = Math.random().toString(36).slice(2, 9);
+  return `p_${Date.now().toString(36)}_${random}`;
+}
+
+function loadPlayers(){
+  try{
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    return Array.isArray(data) ? data.map(normalizePlayer) : [];
+  }catch(error){
+    return [];
+  }
+}
+
+function savePlayers(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
+}
+
+function normalizePlayer(player){
+  const p = {
+    id:String(player?.id || "").trim() || generatePlayerId(),
+    name:String(player?.name || "").trim(),
+    number:String(player?.number || "").trim(),
+    youtubeUrl:String(player?.youtubeUrl || player?.youtube || "").trim(),
+    youtubeStart:normalizeSeconds(player?.youtubeStart ?? player?.start ?? 0)
+  };
+
+  POSITIONS.forEach(pos => {
+    p[pos.id] = normalizeGrade(player?.[pos.id]);
+  });
+
+  return p;
+}
+
+function loadOrder(){
+  try{
+    const data = JSON.parse(localStorage.getItem(ORDER_STORAGE_KEY) || "[]");
+    if(!Array.isArray(data)) return [];
+
+    return data
+      .map(item => ({
+        playerId:String(item?.playerId || "").trim(),
+        position:normalizeOrderPosition(item?.position || "DH")
+      }))
+      .filter(item => item.playerId)
+      .slice(0, MAX_ORDER);
+  }catch(error){
+    return [];
+  }
+}
+
+function saveOrder(){
+  localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(order));
+}
+
+function cleanOrder(){
+  const validIds = new Set(players.map(player => player.id));
+  const seen = new Set();
+
+  order = order.filter(item => {
+    if(!validIds.has(item.playerId)) return false;
+    if(seen.has(item.playerId)) return false;
+    seen.add(item.playerId);
+    return true;
+  }).slice(0, MAX_ORDER);
+
+  checkedPlayerIds = new Set(
+    [...checkedPlayerIds].filter(id => validIds.has(id) && !seen.has(id))
+  );
+}
+function initPositionInputs(){
+  const box = document.getElementById("positionInputs");
+  box.innerHTML = "";
+
+  POSITIONS.forEach(pos => {
+    const label = document.createElement("label");
+    label.textContent = pos.short;
+
+    const select = document.createElement("select");
+    select.id = pos.id;
+    select.setAttribute("aria-label", pos.label);
+
+    GRADES.forEach(grade => {
+      const option = document.createElement("option");
+      option.value = grade;
+      option.textContent = grade;
+      select.appendChild(option);
+    });
+
+    label.appendChild(select);
+    box.appendChild(label);
+  });
+}
+
+function setView(view){
+  currentView = view === "order" ? "order" : "defense";
+
+  document.getElementById("defenseView").classList.toggle("view-hidden", currentView !== "defense");
+  document.getElementById("orderView").classList.toggle("view-hidden", currentView !== "order");
+  document.getElementById("playerFormBox").classList.toggle("view-hidden", currentView !== "defense");
+
+  const orderSideBox = document.getElementById("orderSideBox");
+  if(orderSideBox){
+    orderSideBox.classList.toggle("view-hidden", currentView !== "order");
+  }
+
+  document.getElementById("tabDefense").classList.toggle("active", currentView === "defense");
+  document.getElementById("tabOrder").classList.toggle("active", currentView === "order");
+
+  renderList();
+  renderOrder();
+  updateSelectedForOrder();
+}
+
+function getFilteredPlayerItems(){
+  const keyword = normalizeSearchText(document.getElementById("searchText")?.value || "");
+
+  return players
+    .map((player, index) => ({ player, index }))
+    .filter(item => {
+      if(!keyword) return true;
+      const target = normalizeSearchText(`${item.player.number} ${item.player.name}`);
+      return target.includes(keyword);
+    });
+}
+
+function renderList(){
+  cleanOrder();
+
+  const list = document.getElementById("playerList");
+  const count = document.getElementById("playerCount");
+  const filtered = getFilteredPlayerItems();
+  list.innerHTML = "";
+
+  count.textContent = `登録 ${players.length}人 / 表示 ${filtered.length}人`;
+
+  if(players.length === 0){
+    list.innerHTML = "<div class='empty'>CSVを読み込むか、選手を追加してください。</div>";
+    updateBulkOrderInfo();
+    return;
+  }
+
+  if(filtered.length === 0){
+    list.innerHTML = "<div class='empty'>該当する選手がいません。</div>";
+    updateBulkOrderInfo();
+    return;
+  }
+
+  filtered.forEach(({ player, index }) => {
+    const div = document.createElement("div");
+    const inOrder = isPlayerInOrder(player.id);
+    div.className = "player" + (index === selectedIndex ? " selected" : "") + (inOrder ? " in-order" : "");
+    div.onclick = () => {
+      selectPlayer(index);
+      if(currentView === "order" && !inOrder){
+        toggleCheckedPlayer(player.id);
+      }
+    };
+
+    if(currentView === "order"){
+      const check = document.createElement("input");
+      check.type = "checkbox";
+      check.className = "player-check";
+      check.checked = checkedPlayerIds.has(player.id);
+      check.disabled = inOrder;
+      check.title = inOrder ? "すでに打線に入っています" : "打線に追加する";
+      check.onclick = event => event.stopPropagation();
+      check.onchange = () => {
+        setCheckedPlayer(player.id, check.checked);
+      };
+      div.appendChild(check);
+    }
+
+    const number = document.createElement("div");
+    number.className = "player-number";
+    number.textContent = player.number ? `#${player.number}` : "#-";
+
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = player.name;
+
+    div.appendChild(number);
+    div.appendChild(name);
+
+    if(inOrder){
+      checkedPlayerIds.delete(player.id);
+
+      const chip = document.createElement("div");
+      chip.className = "order-chip";
+      chip.textContent = "打線";
+      div.appendChild(chip);
+    }
+
+    list.appendChild(div);
+  });
+
+  updateBulkOrderInfo();
+}
+function updateCurrentPlayer(){
+  const title = document.getElementById("currentPlayer");
+  const sub = document.getElementById("currentPlayerSub");
+
+  if(selectedIndex === null || !players[selectedIndex]){
+    title.textContent = "選手未選択";
+    sub.textContent = "選手を選ぶと守備適性が表示されます。";
+    updateSelectedForOrder();
+    return;
+  }
+
+  const player = players[selectedIndex];
+  title.textContent = `#${player.number} ${player.name}`;
+  sub.textContent = "丸バッジを押すと適性を変更できます。";
+  updateSelectedForOrder();
+}
+
+function updateSelectedForOrder(){
+  const el = document.getElementById("selectedForOrder");
+  if(!el) return;
+
+  if(selectedIndex === null || !players[selectedIndex]){
+    el.textContent = "選手を選んでください。";
+    updateBulkOrderInfo();
+    return;
+  }
+
+  const player = players[selectedIndex];
+  el.textContent = `選択中: #${player.number || "-"} ${player.name}`;
+  updateBulkOrderInfo();
+}
+function clearBadges(){
+  document.querySelectorAll(".badge").forEach(badge => badge.remove());
+}
+
+function showPlayer(player){
+  clearBadges();
+  const field = document.getElementById("field");
+
+  POSITIONS.forEach(pos => {
+    const grade = normalizeGrade(player[pos.id]);
+
+    const badge = document.createElement("div");
+    badge.className = `badge grade-${grade.toLowerCase()}`;
+    badge.textContent = grade;
+    badge.style.top = pos.top;
+    badge.style.left = pos.left;
+    badge.title = `${pos.label}: ${grade} / クリックで変更`;
+    badge.onclick = () => cycleGrade(pos.id);
+
+    const label = document.createElement("span");
+    label.className = "badge-label";
+    label.textContent = pos.short;
+    badge.appendChild(label);
+
+    field.appendChild(badge);
+  });
+}
+
+function selectPlayer(index){
+  if(!players[index]) return;
+
+  selectedIndex = index;
+  const player = players[index];
+
+  document.getElementById("formTitle").textContent = "選手編集";
+  document.getElementById("name").value = player.name;
+  document.getElementById("number").value = player.number;
+
+  POSITIONS.forEach(pos => {
+    document.getElementById(pos.id).value = normalizeGrade(player[pos.id]);
+  });
+
+  showPlayer(player);
+  updateCurrentPlayer();
+  renderList();
+}
+
+function cycleGrade(positionId){
+  if(selectedIndex === null || !players[selectedIndex]) return;
+
+  const player = players[selectedIndex];
+  const current = normalizeGrade(player[positionId]);
+  const currentIndex = GRADES.indexOf(current);
+  const next = GRADES[(currentIndex + 1) % GRADES.length];
+
+  player[positionId] = next;
+  document.getElementById(positionId).value = next;
+
+  savePlayers();
+  showPlayer(player);
+  renderOrder();
+}
+
+function saveForm(){
+  const name = document.getElementById("name").value.trim();
+  const number = document.getElementById("number").value.trim();
+
+  if(!name){
+    alert("名前を入力してください。");
+    return;
+  }
+
+  if(!number){
+    alert("背番号を入力してください。");
+    return;
+  }
+
+  const player = {
+    id:selectedIndex === null ? generatePlayerId() : players[selectedIndex].id,
+    name,
+    number
+  };
+
+  POSITIONS.forEach(pos => {
+    player[pos.id] = normalizeGrade(document.getElementById(pos.id).value);
+  });
+
+  if(selectedIndex === null){
+    players.push(player);
+    selectedIndex = players.length - 1;
+  }else{
+    players[selectedIndex] = player;
+  }
+
+  savePlayers();
+  selectPlayer(selectedIndex);
+  renderOrder();
+}
+
+function clearForm(){
+  selectedIndex = null;
+  document.getElementById("formTitle").textContent = "選手追加";
+  document.getElementById("name").value = "";
+  document.getElementById("number").value = "";
+
+  POSITIONS.forEach(pos => {
+    document.getElementById(pos.id).value = "D";
+  });
+
+  clearBadges();
+  updateCurrentPlayer();
+  renderList();
+}
+
+function deleteSelected(){
+  if(selectedIndex === null || !players[selectedIndex]){
+    alert("削除する選手を選んでください。");
+    return;
+  }
+
+  const player = players[selectedIndex];
+  if(!confirm(`#${player.number} ${player.name} を削除しますか？`)) return;
+
+  const deletedId = player.id;
+  stopYouTubePreview();
+  pendingSwapIndex = null;
+  pendingBattingSwapIndex = null;
+  const nextIndex = Math.min(selectedIndex, players.length - 2);
+  players.splice(selectedIndex, 1);
+  order = order.filter(item => item.playerId !== deletedId);
+  checkedPlayerIds.delete(deletedId);
+  savePlayers();
+  saveOrder();
+
+  if(players.length > 0){
+    selectedIndex = null;
+    selectPlayer(nextIndex);
+  }else{
+    clearForm();
+  }
+
+  renderOrder();
+}
+
+function addSelectedToOrder(){
+  if(selectedIndex === null || !players[selectedIndex]){
+    alert("打線に追加する選手を選んでください。");
+    return;
+  }
+
+  cleanOrder();
+
+  if(order.length >= MAX_ORDER){
+    alert(`打線に入れられるのは最大${MAX_ORDER}人です。`);
+    return;
+  }
+
+  const player = players[selectedIndex];
+
+  if(isPlayerInOrder(player.id)){
+    alert("その選手はすでに打線に入っています。");
+    return;
+  }
+
+  order.push({
+    playerId:player.id,
+    position:"DH"
+  });
+
+  autoAssignOrder(true);
+  saveOrder();
+  setView("order");
+  renderOrder();
+  renderList();
+}
+
+
+function addCheckedToOrder(){
+  cleanOrder();
+
+  const candidates = players.filter(player => checkedPlayerIds.has(player.id) && !isPlayerInOrder(player.id));
+
+  if(candidates.length === 0){
+    alert("追加する選手にチェックを入れてください。");
+    return;
+  }
+
+  const available = MAX_ORDER - order.length;
+
+  if(available <= 0){
+    alert(`打線に入れられるのは最大${MAX_ORDER}人です。`);
+    return;
+  }
+
+  const addList = candidates.slice(0, available);
+  const skippedCount = candidates.length - addList.length;
+
+  addList.forEach(player => {
+    order.push({
+      playerId:player.id,
+      position:"DH"
+    });
+    checkedPlayerIds.delete(player.id);
+  });
+
+  autoAssignOrder(true);
+  saveOrder();
+  setView("order");
+  renderOrder();
+  renderList();
+
+  if(skippedCount > 0){
+    alert(`${addList.length}人を追加しました。最大${MAX_ORDER}人なので、${skippedCount}人は追加していません。`);
+  }
+}
+
+function setCheckedPlayer(playerId, checked){
+  if(isPlayerInOrder(playerId)){
+    checkedPlayerIds.delete(playerId);
+    updateBulkOrderInfo();
+    return;
+  }
+
+  if(checked){
+    checkedPlayerIds.add(playerId);
+  }else{
+    checkedPlayerIds.delete(playerId);
+  }
+
+  updateBulkOrderInfo();
+}
+
+function toggleCheckedPlayer(playerId){
+  if(isPlayerInOrder(playerId)) return;
+
+  if(checkedPlayerIds.has(playerId)){
+    checkedPlayerIds.delete(playerId);
+  }else{
+    checkedPlayerIds.add(playerId);
+  }
+
+  renderList();
+  updateBulkOrderInfo();
+}
+
+function checkVisiblePlayers(){
+  getFilteredPlayerItems().forEach(({ player }) => {
+    if(!isPlayerInOrder(player.id)){
+      checkedPlayerIds.add(player.id);
+    }
+  });
+
+  renderList();
+}
+
+function clearCheckedPlayers(){
+  checkedPlayerIds.clear();
+  renderList();
+}
+
+function updateBulkOrderInfo(){
+  const el = document.getElementById("bulkOrderInfo");
+  if(!el) return;
+
+  const checkedCount = players.filter(player => checkedPlayerIds.has(player.id) && !isPlayerInOrder(player.id)).length;
+  const canAdd = Math.max(0, MAX_ORDER - order.length);
+  const willAdd = Math.min(checkedCount, canAdd);
+
+  el.textContent = `チェック ${checkedCount}人 / 追加可能 ${canAdd}人 / 追加予定 ${willAdd}人`;
+}
+
+function removeFromOrder(index){
+  if(index < 0 || index >= order.length) return;
+  pendingSwapIndex = null;
+  pendingBattingSwapIndex = null;
+  stopYouTubePreview();
+  order.splice(index, 1);
+  saveOrder();
+  renderOrder();
+  renderList();
+}
+
+function moveOrder(index, direction){
+  pendingSwapIndex = null;
+  pendingBattingSwapIndex = null;
+  const nextIndex = index + direction;
+  if(index < 0 || index >= order.length) return;
+  if(nextIndex < 0 || nextIndex >= order.length) return;
+
+  const temp = order[index];
+  order[index] = order[nextIndex];
+  order[nextIndex] = temp;
+
+  saveOrder();
+  renderOrder();
+}
+
+function handleBattingOrderClick(index){
+  if(index < 0 || index >= order.length) return;
+  pendingSwapIndex = null;
+
+  if(pendingBattingSwapIndex === null){
+    pendingBattingSwapIndex = index;
+    renderOrder();
+    return;
+  }
+
+  if(pendingBattingSwapIndex === index){
+    pendingBattingSwapIndex = null;
+    renderOrder();
+    return;
+  }
+
+  const temp = order[pendingBattingSwapIndex];
+  order[pendingBattingSwapIndex] = order[index];
+  order[index] = temp;
+
+  pendingBattingSwapIndex = null;
+  saveOrder();
+  renderOrder();
+}
+
+function handlePositionButtonClick(index){
+  if(index < 0 || index >= order.length) return;
+  pendingBattingSwapIndex = null;
+
+  if(pendingSwapIndex === null){
+    pendingSwapIndex = index;
+    renderOrder();
+    return;
+  }
+
+  if(pendingSwapIndex === index){
+    pendingSwapIndex = null;
+    renderOrder();
+    return;
+  }
+
+  const temp = order[pendingSwapIndex].position;
+  order[pendingSwapIndex].position = order[index].position;
+  order[index].position = temp;
+
+  pendingSwapIndex = null;
+  saveOrder();
+  renderOrder();
+}
+
+function autoAssignAllOrder(){
+  if(order.length === 0) return;
+  pendingBattingSwapIndex = null;
+  autoAssignOrder(false);
+  saveOrder();
+  renderOrder();
+}
+
+function autoAssignOrder(preserveExisting){
+  cleanOrder();
+
+  const counts = getPositionCounts();
+  const lockedIndexes = new Set();
+  const lockedPositions = new Set();
+
+  if(preserveExisting){
+    order.forEach((item, index) => {
+      const position = normalizeOrderPosition(item.position);
+      item.position = position;
+
+      if(position !== "DH" && counts[position] === 1){
+        lockedIndexes.add(index);
+        lockedPositions.add(position);
+      }
+    });
+  }
+
+  const availablePositions = POSITIONS.filter(pos => !lockedPositions.has(pos.id));
+  const candidateIndexes = order
+    .map((_, index) => index)
+    .filter(index => !lockedIndexes.has(index));
+
+  candidateIndexes.forEach(index => {
+    order[index].position = "DH";
+  });
+
+  if(availablePositions.length === 0 || candidateIndexes.length === 0){
+    pendingSwapIndex = null;
+    return;
+  }
+
+  const states = new Map();
+  states.set(0, { score:0, count:0, assignments:[] });
+
+  candidateIndexes.forEach(orderIndex => {
+    const player = getPlayerById(order[orderIndex].playerId);
+    if(!player) return;
+
+    const nextStates = new Map(states);
+
+    states.forEach((state, mask) => {
+      availablePositions.forEach((pos, posIndex) => {
+        const bit = 1 << posIndex;
+        if(mask & bit) return;
+
+        const nextMask = mask | bit;
+        const candidate = {
+          score:state.score + gradeScore(player[pos.id]),
+          count:state.count + 1,
+          assignments:[...state.assignments, { orderIndex, position:pos.id }]
+        };
+
+        if(isBetterAutoAssignState(candidate, nextStates.get(nextMask))){
+          nextStates.set(nextMask, candidate);
+        }
+      });
+    });
+
+    states.clear();
+    nextStates.forEach((value, key) => states.set(key, value));
+  });
+
+  let best = null;
+  states.forEach(state => {
+    if(isBetterAutoAssignState(state, best)){
+      best = state;
+    }
+  });
+
+  if(best){
+    best.assignments.forEach(item => {
+      order[item.orderIndex].position = item.position;
+    });
+  }
+
+  pendingSwapIndex = null;
+  pendingBattingSwapIndex = null;
+}
+
+function isBetterAutoAssignState(candidate, current){
+  if(!current) return true;
+  if(candidate.score !== current.score) return candidate.score > current.score;
+  return candidate.count > current.count;
+}
+
+function gradeScore(value){
+  const grade = normalizeGrade(value);
+  if(grade === "A") return 40;
+  if(grade === "B") return 30;
+  if(grade === "C") return 20;
+  return 10;
+}
+
+function clearOrder(){
+  if(order.length === 0) return;
+  if(!confirm("オーダーを全てクリアしますか？")) return;
+
+  pendingSwapIndex = null;
+  pendingBattingSwapIndex = null;
+  order = [];
+  checkedPlayerIds.clear();
+  saveOrder();
+  renderOrder();
+  renderList();
+}
+
+function renderOrder(){
+  cleanOrder();
+  if(pendingSwapIndex !== null && (pendingSwapIndex < 0 || pendingSwapIndex >= order.length)){
+    pendingSwapIndex = null;
+  }
+  if(pendingBattingSwapIndex !== null && (pendingBattingSwapIndex < 0 || pendingBattingSwapIndex >= order.length)){
+    pendingBattingSwapIndex = null;
+  }
+  saveOrder();
+
+  const list = document.getElementById("orderList");
+  const summary = document.getElementById("orderSummary");
+  const warnings = document.getElementById("orderWarnings");
+
+  if(!list || !summary || !warnings) return;
+
+  list.innerHTML = "";
+
+  const counts = getPositionCounts();
+  const fielders = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  const dhCount = order.filter(item => item.position === "DH").length;
+
+  summary.textContent = `打線 ${order.length}/${MAX_ORDER}人 / 守備 ${fielders}/9人 / DH ${dhCount}人`;
+
+  const duplicated = Object.entries(counts)
+    .filter(([, count]) => count >= 2)
+    .map(([positionId]) => getOrderPositionLabel(positionId));
+
+  if(pendingBattingSwapIndex !== null){
+    warnings.textContent = "入れ替え先の打順番号をクリックしてください。もう一度同じ番号を押すとキャンセルします。";
+  }else if(pendingSwapIndex !== null){
+    warnings.textContent = "入れ替え先の守備位置をクリックしてください。もう一度同じ守備位置を押すとキャンセルします。";
+  }else if(duplicated.length > 0){
+    warnings.textContent = `守備位置が重複しています: ${duplicated.join("、")}`;
+  }else{
+    warnings.textContent = "打順番号を2つ押すと打順、守備位置ボタンを2つ押すと守備位置が入れ替わります。動画は各打者の設定から登録できます。";
+  }
+
+  if(order.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "選手一覧から選手を選んで、打線に追加してください。";
+    list.appendChild(empty);
+    return;
+  }
+
+  const head = document.createElement("div");
+  head.className = "order-head";
+  ["打順", "守備", "選手", "動画"].forEach(text => {
+    const cell = document.createElement("div");
+    cell.textContent = text;
+    head.appendChild(cell);
+  });
+  list.appendChild(head);
+
+  order.forEach((item, index) => {
+    const player = getPlayerById(item.playerId);
+    if(!player) return;
+
+    const row = document.createElement("div");
+    const duplicatedPosition = item.position !== "DH" && counts[item.position] >= 2;
+    row.className = "order-row"
+      + (duplicatedPosition ? " position-duplicate" : "")
+      + (pendingSwapIndex === index ? " swap-source" : "")
+      + (pendingBattingSwapIndex === index ? " order-swap-source" : "");
+
+    const no = document.createElement("button");
+    no.type = "button";
+    no.className = "order-no-button" + (pendingBattingSwapIndex === index ? " order-swap-selected" : "");
+    no.textContent = index + 1;
+    no.title = pendingBattingSwapIndex === null
+      ? "入れ替えたい打順を選択"
+      : "この打順と入れ替え";
+    no.onclick = () => handleBattingOrderClick(index);
+
+    const positionButton = document.createElement("button");
+    positionButton.type = "button";
+    positionButton.className = "order-position-button" + (pendingSwapIndex === index ? " swap-selected" : "");
+    positionButton.textContent = getOrderPositionLabel(item.position);
+    positionButton.title = pendingSwapIndex === null
+      ? "入れ替えたい守備位置を選択"
+      : "この守備位置と入れ替え";
+    positionButton.onclick = () => handlePositionButtonClick(index);
+
+    const playerMain = document.createElement("div");
+    playerMain.className = "order-player-main";
+
+    const name = document.createElement("div");
+    const grade = getOrderGrade(item);
+    name.className = "order-name" + (grade ? ` name-grade-${grade.toLowerCase()}` : "");
+    name.textContent = `#${player.number || "-"} ${player.name}`;
+
+    const sub = document.createElement("div");
+    sub.className = "order-player-sub";
+    sub.textContent = getOrderSubText(item);
+
+    playerMain.appendChild(name);
+    playerMain.appendChild(sub);
+
+    const buttons = document.createElement("div");
+    buttons.className = "order-row-buttons";
+
+    const play = document.createElement("button");
+    play.type = "button";
+    play.className = "mini";
+    play.textContent = "▶";
+    play.disabled = !getYouTubeVideoId(player.youtubeUrl);
+    play.title = play.disabled ? "YouTube設定がありません" : "15秒再生";
+    play.onclick = () => playYouTubePreview(player.id);
+
+    const setting = document.createElement("button");
+    setting.type = "button";
+    setting.className = "mini sub";
+    setting.textContent = "設定";
+    setting.title = "YouTube URLと開始秒数を設定";
+    setting.onclick = () => setupYouTubeForPlayer(player.id);
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "mini danger";
+    del.textContent = "×";
+    del.title = "打線から外す";
+    del.onclick = () => removeFromOrder(index);
+
+    buttons.appendChild(play);
+    buttons.appendChild(setting);
+    buttons.appendChild(del);
+
+    row.appendChild(no);
+    row.appendChild(positionButton);
+    row.appendChild(playerMain);
+    row.appendChild(buttons);
+    list.appendChild(row);
+  });
+}
+
+function setupYouTubeForPlayer(playerId){
+  const player = getPlayerById(playerId);
+  if(!player) return;
+
+  const urlInput = prompt(`${player.name} のYouTube URLを入力してください。空欄で設定を削除します。`, player.youtubeUrl || "");
+  if(urlInput === null) return;
+
+  const url = String(urlInput || "").trim();
+
+  if(!url){
+    player.youtubeUrl = "";
+    player.youtubeStart = 0;
+    savePlayers();
+    renderOrder();
+    stopYouTubePreview();
+    return;
+  }
+
+  const videoId = getYouTubeVideoId(url);
+  if(!videoId){
+    alert("YouTubeのURLを読み取れませんでした。");
+    return;
+  }
+
+  const parsedStart = parseYouTubeTimeFromUrl(url);
+  const defaultStart = parsedStart || player.youtubeStart || 0;
+  const startInput = prompt("何秒目から再生しますか？ 例: 83 / 1:23", String(defaultStart));
+  if(startInput === null) return;
+
+  player.youtubeUrl = url;
+  player.youtubeStart = normalizeSeconds(startInput);
+  savePlayers();
+  renderOrder();
+}
+
+function playYouTubePreview(playerId){
+  const player = getPlayerById(playerId);
+  if(!player) return;
+
+  const videoId = getYouTubeVideoId(player.youtubeUrl);
+  if(!videoId){
+    alert("この選手のYouTube設定がありません。");
+    return;
+  }
+
+  const start = normalizeSeconds(player.youtubeStart);
+  const end = start + 15;
+  const box = document.getElementById("youtubeBox");
+  const meta = document.getElementById("youtubeMeta");
+  const area = document.getElementById("youtubePlayerArea");
+
+  if(!box || !meta || !area) return;
+
+  stopYouTubePreview();
+
+  meta.textContent = `再生中: #${player.number || "-"} ${player.name} / ${formatSeconds(start)}〜${formatSeconds(end)}`;
+
+  const watchUrl = buildYouTubeWatchUrl(videoId, start);
+
+  if(shouldOpenYouTubeDirectly()){
+    area.innerHTML = `
+      <div class="youtube-note">
+        SafariでローカルHTMLを開いているため、埋め込み再生ではError 153が出やすいです。YouTubeを別ウィンドウで開き、15秒後に閉じます。
+      </div>
+      <div class="youtube-fallback">
+        <a href="${watchUrl}" target="_blank">YouTubeで開く</a>
+      </div>
+    `;
+    box.classList.add("active");
+    openYouTubePreviewWindow(watchUrl);
+    youtubeStopTimer = setTimeout(stopYouTubePreview, 15000);
+    return;
+  }
+
+  const originParam = location.origin && location.origin !== "null"
+    ? `&origin=${encodeURIComponent(location.origin)}`
+    : "";
+  const src = `https://www.youtube.com/embed/${videoId}?start=${start}&end=${end}&autoplay=1&controls=1&playsinline=1&rel=0${originParam}`;
+
+  area.innerHTML = `
+    <div class="youtube-frame-wrap">
+      <iframe src="${src}" title="YouTube preview" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+    <div class="youtube-fallback">
+      <a href="${watchUrl}" target="_blank">Error 153が出る場合はYouTubeで開く</a>
+    </div>
+  `;
+
+  box.classList.add("active");
+  youtubeStopTimer = setTimeout(stopYouTubePreview, 15000);
+}
+
+function shouldOpenYouTubeDirectly(){
+  const protocol = String(location.protocol || "").toLowerCase();
+  return protocol === "file:" || protocol === "blob:" || protocol === "data:";
+}
+
+function buildYouTubeWatchUrl(videoId, start){
+  const safeId = encodeURIComponent(videoId);
+  const safeStart = normalizeSeconds(start);
+  return `https://www.youtube.com/watch?v=${safeId}&t=${safeStart}s`;
+}
+
+function openYouTubePreviewWindow(url){
+  try{
+    if(youtubePopup && !youtubePopup.closed){
+      youtubePopup.close();
+    }
+
+    youtubePopup = window.open(url, "youtubePreview", "width=960,height=640");
+
+    if(!youtubePopup){
+      alert("ポップアップがブロックされました。表示されたリンクからYouTubeを開いてください。");
+    }
+  }catch(error){
+    youtubePopup = null;
+  }
+}
+
+function stopYouTubePreview(){
+  if(youtubeStopTimer){
+    clearTimeout(youtubeStopTimer);
+    youtubeStopTimer = null;
+  }
+
+  try{
+    if(youtubePopup && !youtubePopup.closed){
+      youtubePopup.close();
+    }
+  }catch(error){
+    // 閉じられない場合は無視
+  }
+  youtubePopup = null;
+
+  const box = document.getElementById("youtubeBox");
+  const meta = document.getElementById("youtubeMeta");
+  const area = document.getElementById("youtubePlayerArea");
+
+  if(area) area.innerHTML = "";
+  if(meta) meta.textContent = "";
+  if(box) box.classList.remove("active");
+}
+
+function getYouTubeVideoId(value){
+  const text = String(value || "").trim();
+  if(!text) return "";
+
+  const direct = text.match(/^[A-Za-z0-9_-]{11}$/);
+  if(direct) return text;
+
+  try{
+    const url = new URL(text);
+    const host = url.hostname.replace(/^www\./, "").toLowerCase();
+
+    if(host === "youtu.be"){
+      const id = url.pathname.split("/").filter(Boolean)[0] || "";
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : "";
+    }
+
+    if(host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")){
+      const v = url.searchParams.get("v") || "";
+      if(/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+
+      const parts = url.pathname.split("/").filter(Boolean);
+      const keywordIndex = parts.findIndex(part => ["embed", "shorts", "live"].includes(part));
+      if(keywordIndex !== -1 && parts[keywordIndex + 1]){
+        const id = parts[keywordIndex + 1];
+        return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : "";
+      }
+    }
+  }catch(error){
+    // 下の正規表現で拾う
+  }
+
+  const match = text.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
+  return match ? match[1] : "";
+}
+
+function parseYouTubeTimeFromUrl(value){
+  try{
+    const url = new URL(String(value || "").trim());
+    return normalizeSeconds(url.searchParams.get("t") || url.searchParams.get("start") || 0);
+  }catch(error){
+    const match = String(value || "").match(/[?&#](?:t|start)=([^&#]+)/);
+    return match ? normalizeSeconds(decodeURIComponent(match[1])) : 0;
+  }
+}
+
+function normalizeSeconds(value){
+  if(typeof value === "number" && Number.isFinite(value)){
+    return Math.max(0, Math.floor(value));
+  }
+
+  let raw = String(value ?? "")
+    .trim()
+    .replace(/[０-９：]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+    .toLowerCase();
+
+  if(!raw) return 0;
+
+  if(raw.includes(":")){
+    const parts = raw.split(":").map(part => Number(part));
+    if(parts.every(part => Number.isFinite(part))){
+      return Math.max(0, Math.floor(parts.reduce((sum, part) => sum * 60 + part, 0)));
+    }
+  }
+
+  const hour = Number((raw.match(/(\d+)\s*h/) || [])[1] || 0);
+  const min = Number((raw.match(/(\d+)\s*m/) || raw.match(/(\d+)\s*分/) || [])[1] || 0);
+  const sec = Number((raw.match(/(\d+)\s*s/) || raw.match(/(\d+)\s*秒/) || [])[1] || 0);
+
+  if(hour || min || sec){
+    return Math.max(0, Math.floor(hour * 3600 + min * 60 + sec));
+  }
+
+  const numeric = Number(raw.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
+}
+
+function formatSeconds(value){
+  const total = normalizeSeconds(value);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getPositionCounts(){
+  const counts = {};
+
+  order.forEach(item => {
+    const position = normalizeOrderPosition(item.position);
+    if(position === "DH") return;
+    counts[position] = (counts[position] || 0) + 1;
+  });
+
+  return counts;
+}
+
+
+function pickOrderPosition(player){
+  const counts = getPositionCounts();
+  const openPositions = POSITIONS.filter(pos => !counts[pos.id]);
+
+  if(openPositions.length === 0) return "DH";
+
+  for(const grade of GRADES){
+    const found = openPositions.find(pos => normalizeGrade(player[pos.id]) === grade);
+    if(found) return found.id;
+  }
+
+  return "DH";
+}
+
+function getOrderSubText(item){
+  const positionLabel = getOrderPositionLabel(item.position);
+  const grade = getOrderGrade(item);
+
+  if(!grade) return positionLabel;
+  return `${positionLabel} / ${grade}`;
+}
+
+function getOrderGrade(item){
+  const position = normalizeOrderPosition(item.position);
+  if(position === "DH") return "";
+
+  const player = getPlayerById(item.playerId);
+  if(!player) return "";
+
+  return normalizeGrade(player[position]);
+}
+
+function getPlayerById(id){
+  return players.find(player => player.id === id) || null;
+}
+
+function isPlayerInOrder(playerId){
+  return order.some(item => item.playerId === playerId);
+}
+
+function getOrderPositionLabel(positionId){
+  const position = ORDER_POSITIONS.find(pos => pos.id === positionId);
+  return position ? position.short : "DH";
+}
+
+function normalizeOrderPosition(value){
+  const raw = String(value || "DH").trim();
+  const normalized = normalizeHeaderText(raw);
+
+  if(normalized === "DH" || normalized === "指名打者") return "DH";
+
+  for(const pos of POSITIONS){
+    const candidates = [pos.id, pos.short, pos.label, ...pos.csv].map(normalizeHeaderText);
+    if(candidates.includes(normalized)) return pos.id;
+  }
+
+  return "DH";
+}
+
+function normalizeGrade(value){
+  if(value === null || value === undefined) return "D";
+
+  const raw = String(value)
+    .trim()
+    .replace(/[Ａ-Ｄａ-ｄ]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+    .toUpperCase();
+
+  if(raw === "A" || raw === "◎" || raw.includes("二重丸")) return "A";
+  if(raw === "B" || raw === "○" || raw === "◯" || raw.includes("丸")) return "B";
+  if(raw === "C" || raw === "△" || raw === "▲") return "C";
+  if(raw === "D" || raw === "×" || raw === "✕" || raw === "X" || raw === "-" || raw === "ー") return "D";
+
+  return "D";
+}
+
+function normalizeHeaderText(value){
+  return String(value || "")
+    .replace(/^\uFEFF/, "")
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+    .replace(/[\s　・（）()［］\[\]【】「」『』。、，,？?]/g, "")
+    .toUpperCase();
+}
+
+function normalizeSearchText(value){
+  return String(value || "")
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+    .replace(/[\s　]/g, "")
+    .toUpperCase();
+}
+
+function parseCsv(text){
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  text = String(text || "").replace(/^\uFEFF/, "");
+
+  for(let i = 0; i < text.length; i++){
+    const char = text[i];
+    const next = text[i + 1];
+
+    if(char === '"' && inQuotes && next === '"'){
+      cell += '"';
+      i++;
+    }else if(char === '"'){
+      inQuotes = !inQuotes;
+    }else if(char === "," && !inQuotes){
+      row.push(cell);
+      cell = "";
+    }else if((char === "\n" || char === "\r") && !inQuotes){
+      if(char === "\r" && next === "\n") i++;
+      row.push(cell);
+      if(row.some(v => String(v).trim() !== "")) rows.push(row);
+      row = [];
+      cell = "";
+    }else{
+      cell += char;
+    }
+  }
+
+  if(cell.length > 0 || row.length > 0){
+    row.push(cell);
+    if(row.some(v => String(v).trim() !== "")) rows.push(row);
+  }
+
+  return rows;
+}
+
+function findHeaderIndex(headers, keywords){
+  const normalizedHeaders = headers.map(normalizeHeaderText);
+  const normalizedKeywords = keywords.map(normalizeHeaderText);
+
+  for(const key of normalizedKeywords){
+    const exactIndex = normalizedHeaders.findIndex(header => header === key);
+    if(exactIndex !== -1) return exactIndex;
+  }
+
+  for(const key of normalizedKeywords){
+    if(!key) continue;
+    if(/^[A-Z]$/.test(key)) continue;
+
+    const includeIndex = normalizedHeaders.findIndex(header => header.includes(key));
+    if(includeIndex !== -1) return includeIndex;
+  }
+
+  return -1;
+}
+
+function getCell(row, index){
+  if(index === -1) return "";
+  return row[index] || "";
+}
+
+function buildIndexes(headers){
+  const indexes = {
+    name:findHeaderIndex(headers, ["名前", "お名前", "氏名", "フルネーム", "NAME"]),
+    number:findHeaderIndex(headers, ["背番号", "番号", "NUMBER", "NO"]),
+    youtubeUrl:findHeaderIndex(headers, ["YouTube URL", "YouTube", "動画URL", "登場曲URL", "登場曲"]),
+    youtubeStart:findHeaderIndex(headers, ["開始秒", "開始時間", "開始位置", "START", "START SECOND"])
+  };
+
+  POSITIONS.forEach(pos => {
+    indexes[pos.id] = findHeaderIndex(headers, pos.csv);
+  });
+
+  return indexes;
+}
+
+function decodeCsvBuffer(buffer){
+  let text = new TextDecoder("utf-8").decode(buffer);
+  const brokenCount = (text.match(/\uFFFD/g) || []).length;
+
+  if(brokenCount > 0){
+    try{
+      text = new TextDecoder("shift_jis").decode(buffer);
+    }catch(error){
+      // UTF-8の結果をそのまま使う
+    }
+  }
+
+  return text.replace(/^\uFEFF/, "");
+}
+
+function importCsv(){
+  const file = document.getElementById("csvFile").files[0];
+
+  if(!file){
+    alert("CSVファイルを選んでください。");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(event){
+    try{
+      const text = decodeCsvBuffer(event.target.result);
+      const rows = parseCsv(text);
+
+      if(rows.length < 2){
+        alert("CSVの中身を読み取れませんでした。");
+        return;
+      }
+
+      const headers = rows[0];
+      const indexes = buildIndexes(headers);
+
+      if(indexes.name === -1 || indexes.number === -1){
+        alert("名前または背番号の見出しが見つかりませんでした。CSVの1行目を確認してください。");
+        return;
+      }
+
+      const imported = rows.slice(1)
+        .map(row => {
+          const player = {
+            name:String(getCell(row, indexes.name)).trim(),
+            number:String(getCell(row, indexes.number)).trim(),
+            youtubeUrl:String(getCell(row, indexes.youtubeUrl)).trim(),
+            youtubeStart:normalizeSeconds(getCell(row, indexes.youtubeStart))
+          };
+
+          POSITIONS.forEach(pos => {
+            player[pos.id] = normalizeGrade(getCell(row, indexes[pos.id]));
+          });
+
+          return normalizePlayer(player);
+        })
+        .filter(player => player.name && player.number);
+
+      if(imported.length === 0){
+        alert("0人でした。CSVの見出し行、名前、背番号を確認してください。");
+        return;
+      }
+
+      players = imported;
+      order = [];
+      checkedPlayerIds.clear();
+      pendingSwapIndex = null;
+      pendingBattingSwapIndex = null;
+      selectedIndex = null;
+      savePlayers();
+      saveOrder();
+      renderList();
+      renderOrder();
+      selectPlayer(0);
+
+      alert(`${players.length}人を読み込みました。`);
+    }catch(error){
+      console.error(error);
+      alert("CSVの読み込み中にエラーが出ました。ファイル形式を確認してください。");
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+function csvEscape(value){
+  const s = String(value ?? "");
+  if(/[",\n\r]/.test(s)){
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function exportCsv(){
+  if(players.length === 0){
+    alert("出力する選手データがありません。");
+    return;
+  }
+
+  const headers = ["名前", "背番号", ...POSITIONS.map(pos => pos.label), "YouTube URL", "開始秒"];
+  const rows = players.map(player => [
+    player.name,
+    player.number,
+    ...POSITIONS.map(pos => normalizeGrade(player[pos.id])),
+    player.youtubeUrl || "",
+    normalizeSeconds(player.youtubeStart) || ""
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(csvEscape).join(","))
+    .join("\r\n");
+
+  const blob = new Blob(["\uFEFF" + csv], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "defense_players.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+initPositionInputs();
+renderList();
+renderOrder();
+clearForm();
+setView("defense");
+
+if(players.length > 0){
+  selectPlayer(0);
+}
+</script>
+
+</body>
+</html>
