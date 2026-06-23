@@ -687,19 +687,142 @@ button.mini{
     display:none;
   }
 
+  .order-panel{
+    padding:8px;
+    border-radius:10px;
+  }
+
+  .order-top{
+    gap:6px;
+    margin-bottom:4px;
+  }
+
+  .order-title{
+    font-size:17px;
+    line-height:1.15;
+  }
+
+  .order-summary{
+    font-size:11px;
+    margin-top:1px;
+    line-height:1.25;
+  }
+
+  .order-actions{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:4px;
+  }
+
+  .order-actions button{
+    min-width:0;
+    min-height:30px;
+    padding:4px 3px;
+    border-radius:7px;
+    font-size:12px;
+    line-height:1.1;
+  }
+
+  .order-warnings{
+    display:none;
+  }
+
+  .order-list{
+    border-radius:8px;
+  }
+
   .order-row{
-    grid-template-columns:42px 78px minmax(0, 1fr);
-    gap:7px;
+    grid-template-columns:32px 42px minmax(0, 1fr) 80px;
+    gap:4px;
     align-items:center;
+    padding:3px 5px;
+    min-height:42px;
+  }
+
+  .order-no-button,
+  .order-position-button{
+    min-height:30px;
+    padding:3px 2px;
+    border-width:1px;
+    border-radius:7px;
+    font-size:15px;
+    line-height:1.1;
+  }
+
+  .order-name{
+    font-size:14px;
+    line-height:1.08;
+  }
+
+  .order-player-sub{
+    font-size:10px;
+    line-height:1.1;
+    margin-top:1px;
   }
 
   .order-row-buttons{
-    grid-column:1 / -1;
+    grid-column:auto;
     justify-content:flex-end;
+    flex-wrap:nowrap;
+    gap:3px;
   }
 
   button.mini{
-    width:54px;
+    width:24px;
+    min-height:28px;
+    padding:2px 0;
+    border-radius:6px;
+    font-size:12px;
+    line-height:1;
+  }
+
+  body.order-mode .app{
+    padding:6px;
+    gap:6px;
+  }
+
+  body.order-mode .side .box{
+    padding:8px;
+    margin-bottom:6px;
+    border-radius:10px;
+  }
+
+  body.order-mode .side .box:first-child,
+  body.order-mode .side .box:nth-child(3),
+  body.order-mode .side .box:nth-child(4){
+    display:none;
+  }
+
+  body.order-mode .player-toolbar{
+    margin-bottom:4px;
+  }
+
+  body.order-mode .player-toolbar input{
+    min-height:32px;
+    padding:4px 8px;
+    font-size:13px;
+  }
+
+  body.order-mode .player-count{
+    font-size:11px;
+    margin-bottom:4px;
+  }
+
+  body.order-mode .player-list{
+    max-height:150px;
+  }
+
+  body.order-mode .player{
+    padding:6px 8px;
+  }
+
+  body.order-mode .player-number{
+    flex-basis:40px;
+    font-size:13px;
+  }
+
+  body.order-mode .player-name{
+    font-size:13px;
   }
 }
 
@@ -1180,6 +1303,7 @@ function initPositionInputs(){
 
 function setView(view){
   currentView = view === "order" ? "order" : "defense";
+  document.body.classList.toggle("order-mode", currentView === "order");
 
   document.getElementById("defenseView").classList.toggle("view-hidden", currentView !== "defense");
   document.getElementById("orderView").classList.toggle("view-hidden", currentView !== "order");
@@ -1891,7 +2015,7 @@ function renderOrder(){
     const setting = document.createElement("button");
     setting.type = "button";
     setting.className = "mini sub";
-    setting.textContent = "設定";
+    setting.textContent = "⚙";
     setting.title = "YouTube URLと開始秒数を設定";
     setting.onclick = () => setupYouTubeForPlayer(player.id);
 
