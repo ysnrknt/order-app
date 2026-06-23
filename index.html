@@ -133,6 +133,15 @@ button.mini{
   font-size:15px;
 }
 
+button.mini.youtube-play-button,
+button.mini.youtube-setting-button{
+  width:64px;
+}
+
+button.mini.order-defense-button{
+  width:54px;
+}
+
 .button-row{
   display:flex;
   gap:8px;
@@ -458,7 +467,7 @@ button.mini{
 .order-head,
 .order-row{
   display:grid;
-  grid-template-columns:54px 96px minmax(0, 1fr) 210px;
+  grid-template-columns:54px 96px minmax(0, 1fr) 250px;
   gap:8px;
   align-items:center;
 }
@@ -639,6 +648,79 @@ button.mini{
   margin-top:6px;
 }
 
+.defense-modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:14px;
+  background:rgba(0,0,0,.72);
+  z-index:9999;
+}
+
+.defense-modal.active{
+  display:flex;
+}
+
+.defense-modal-card{
+  width:min(760px, 96vw);
+  max-height:92vh;
+  overflow:auto;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  box-shadow:0 12px 40px rgba(0,0,0,.55);
+}
+
+.defense-modal-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.defense-modal-title{
+  font-size:20px;
+  font-weight:900;
+  line-height:1.25;
+}
+
+.defense-modal-sub{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:2px;
+}
+
+.defense-modal-close{
+  width:42px;
+  min-height:38px;
+  margin:0;
+  padding:4px 8px;
+  border-radius:9px;
+  background:#555;
+  font-size:20px;
+  line-height:1;
+}
+
+.defense-modal-field{
+  position:relative;
+  width:100%;
+  aspect-ratio:3/2;
+  overflow:hidden;
+  border-radius:14px;
+  background:#196a37;
+}
+
+.defense-modal-field .badge{
+  cursor:default;
+}
+
+body.modal-open{
+  overflow:hidden;
+}
 
 @media(max-width:900px){
   .app{
@@ -732,10 +814,10 @@ button.mini{
   }
 
   .order-row{
-    grid-template-columns:32px 42px minmax(0, 1fr) 80px;
-    gap:4px;
+    grid-template-columns:30px 38px minmax(0, 1fr) 130px;
+    gap:3px;
     align-items:center;
-    padding:3px 5px;
+    padding:3px 4px;
     min-height:42px;
   }
 
@@ -768,12 +850,40 @@ button.mini{
   }
 
   button.mini{
-    width:24px;
+    width:25px;
     min-height:28px;
     padding:2px 0;
     border-radius:6px;
     font-size:12px;
     line-height:1;
+  }
+
+  button.mini.order-defense-button{
+    width:28px;
+  }
+
+  button.mini.youtube-play-button,
+  button.mini.youtube-setting-button{
+    width:34px;
+  }
+
+  .defense-modal{
+    padding:8px;
+  }
+
+  .defense-modal-card{
+    width:100%;
+    padding:9px;
+    border-radius:12px;
+  }
+
+  .defense-modal-title{
+    font-size:17px;
+  }
+
+  .defense-modal-close{
+    width:38px;
+    min-height:34px;
   }
 
   body.order-mode .app{
@@ -850,6 +960,14 @@ button.mini{
 
   .order-name{
     font-size:16px;
+  }
+
+  body.order-mode .order-title{
+    font-size:17px;
+  }
+
+  body.order-mode .order-name{
+    font-size:14px;
   }
 }
 </style>
@@ -966,6 +1084,25 @@ button.mini{
       </div>
     </section>
   </main>
+</div>
+
+<div id="defenseModal" class="defense-modal" aria-hidden="true" onclick="if(event.target === this) closeDefenseModal()">
+  <div class="defense-modal-card" role="dialog" aria-modal="true" aria-labelledby="defenseModalTitle">
+    <div class="defense-modal-head">
+      <div>
+        <div id="defenseModalTitle" class="defense-modal-title">守備適性</div>
+        <div id="defenseModalSub" class="defense-modal-sub">選手の守備適性を表示します。</div>
+      </div>
+      <button type="button" class="defense-modal-close" onclick="closeDefenseModal()">×</button>
+    </div>
+    <div class="defense-modal-field" id="defenseModalField" aria-label="守備適性図">
+      <svg class="field-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points="50,88 34.7,65 50,42 65.3,65" fill="rgba(194,139,78,0.78)" stroke="#ead2a6" stroke-width="0.55"/>
+        <line x1="50" y1="88" x2="0" y2="12.8" stroke="#f3ead3" stroke-width="0.9" opacity="0.95"/>
+        <line x1="50" y1="88" x2="100" y2="12.8" stroke="#f3ead3" stroke-width="0.9" opacity="0.95"/>
+      </svg>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1950,7 +2087,7 @@ function renderOrder(){
 
   const head = document.createElement("div");
   head.className = "order-head";
-  ["打順", "守備", "選手", "動画"].forEach(text => {
+  ["打順", "守備", "選手", "確認/動画"].forEach(text => {
     const cell = document.createElement("div");
     cell.textContent = text;
     head.appendChild(cell);
@@ -2004,9 +2141,16 @@ function renderOrder(){
     const buttons = document.createElement("div");
     buttons.className = "order-row-buttons";
 
+    const defense = document.createElement("button");
+    defense.type = "button";
+    defense.className = "mini sub order-defense-button";
+    defense.textContent = "守";
+    defense.title = "守備適性を見る";
+    defense.onclick = () => showDefenseModal(player.id);
+
     const play = document.createElement("button");
     play.type = "button";
-    play.className = "mini";
+    play.className = "mini youtube-play-button";
     play.textContent = "▶";
     play.disabled = !getYouTubeVideoId(player.youtubeUrl);
     play.title = play.disabled ? "YouTube設定がありません" : "YouTubeを開く";
@@ -2014,7 +2158,7 @@ function renderOrder(){
 
     const setting = document.createElement("button");
     setting.type = "button";
-    setting.className = "mini sub";
+    setting.className = "mini sub youtube-setting-button";
     setting.textContent = "⚙";
     setting.title = "YouTube URLと開始秒数を設定";
     setting.onclick = () => setupYouTubeForPlayer(player.id);
@@ -2026,6 +2170,7 @@ function renderOrder(){
     del.title = "打線から外す";
     del.onclick = () => removeFromOrder(index);
 
+    buttons.appendChild(defense);
     buttons.appendChild(play);
     buttons.appendChild(setting);
     buttons.appendChild(del);
@@ -2036,6 +2181,54 @@ function renderOrder(){
     row.appendChild(buttons);
     list.appendChild(row);
   });
+}
+
+function showDefenseModal(playerId){
+  const player = getPlayerById(playerId);
+  if(!player) return;
+
+  const modal = document.getElementById("defenseModal");
+  const title = document.getElementById("defenseModalTitle");
+  const sub = document.getElementById("defenseModalSub");
+  const field = document.getElementById("defenseModalField");
+
+  if(!modal || !title || !sub || !field) return;
+
+  title.textContent = `#${player.number || "-"} ${player.name}`;
+  sub.textContent = "各ポジションの守備適性";
+
+  field.querySelectorAll(".badge").forEach(badge => badge.remove());
+
+  POSITIONS.forEach(pos => {
+    const grade = normalizeGrade(player[pos.id]);
+
+    const badge = document.createElement("div");
+    badge.className = `badge grade-${grade.toLowerCase()}`;
+    badge.textContent = grade;
+    badge.style.top = pos.top;
+    badge.style.left = pos.left;
+    badge.title = `${pos.label}: ${grade}`;
+
+    const label = document.createElement("span");
+    label.className = "badge-label";
+    label.textContent = pos.short;
+    badge.appendChild(label);
+
+    field.appendChild(badge);
+  });
+
+  modal.classList.add("active");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+}
+
+function closeDefenseModal(){
+  const modal = document.getElementById("defenseModal");
+  if(!modal) return;
+
+  modal.classList.remove("active");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
 }
 
 function setupYouTubeForPlayer(playerId){
@@ -2549,6 +2742,12 @@ function exportCsv(){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+document.addEventListener("keydown", event => {
+  if(event.key === "Escape"){
+    closeDefenseModal();
+  }
+});
 
 initPositionInputs();
 renderTeams();
