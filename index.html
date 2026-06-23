@@ -749,6 +749,17 @@ button.mini{
     </div>
 
     <div class="box">
+      <h2>所属チーム</h2>
+      <select id="teamSelect" onchange="changeTeam(this.value)"></select>
+      <div class="button-row">
+        <button type="button" class="sub row-btn" onclick="addTeam()">チーム追加</button>
+        <button type="button" class="sub row-btn" onclick="renameTeam()">名前変更</button>
+        <button type="button" class="danger row-btn" onclick="deleteTeam()">削除</button>
+      </div>
+      <p id="teamInfo" class="small">チームごとに選手データとオーダーを別保存します。</p>
+    </div>
+
+    <div class="box">
       <h2>CSV取り込み</h2>
       <input type="file" id="csvFile" accept=".csv,text/csv">
       <button type="button" onclick="importCsv()">CSVを読み込む</button>
@@ -827,7 +838,7 @@ button.mini{
         <div id="youtubeBox" class="youtube-box">
           <div id="youtubeMeta" class="youtube-meta"></div>
           <div id="youtubePlayerArea"></div>
-          <button type="button" class="sub" onclick="stopYouTubePreview()">停止</button>
+          <button type="button" class="sub" onclick="stopYouTubePreview()">表示を閉じる</button>
         </div>
         <div id="orderList" class="order-list"></div>
       </div>
@@ -836,8 +847,13 @@ button.mini{
 </div>
 
 <script>
-const STORAGE_KEY = "players";
-const ORDER_STORAGE_KEY = "battingOrder";
+const LEGACY_STORAGE_KEY = "players";
+const LEGACY_ORDER_STORAGE_KEY = "battingOrder";
+const APP_PREFIX = "defenseOrderAppTeamV1";
+const TEAM_LIST_KEY = `${APP_PREFIX}:teams`;
+const CURRENT_TEAM_KEY = `${APP_PREFIX}:currentTeamId`;
+const LEGACY_MIGRATED_KEY = `${APP_PREFIX}:legacyMigrated`;
+const DEFAULT_TEAM_ID = "team_main";
 const GRADES = ["A", "B", "C", "D"];
 const MAX_ORDER = 18;
 
@@ -858,6 +874,9 @@ const ORDER_POSITIONS = [
   ...POSITIONS
 ];
 
+let teams = loadTeams();
+let currentTeamId = loadCurrentTeamId();
+migrateLegacyDataIfNeeded();
 let players = loadPlayers();
 let order = loadOrder();
 let checkedPlayerIds = new Set();
@@ -872,6 +891,200 @@ if(players.length > 0){
   savePlayers();
 }
 
+function getDefaultTeams(){
+  return [{ id:DEFAULT_TEAM_ID, name:"メインチーム" }];
+}
+
+function loadTeams(){
+  try{
+    const data = JSON.parse(localStorage.getItem(TEAM_LIST_KEY) || "[]");
+    if(Array.isArray(data)){
+      const normalized = data
+        .map(team => ({
+          id:String(team?.id || "").trim(),
+          name:String(team?.name || "").trim()
+        }))
+        .filter(team => team.id && team.name);
+
+      if(normalized.length > 0) return normalized;
+    }
+  }catch(error){
+    // 初期チームを作る
+  }
+
+  const defaults = getDefaultTeams();
+  localStorage.setItem(TEAM_LIST_KEY, JSON.stringify(defaults));
+  return defaults;
+}
+
+function saveTeams(){
+  localStorage.setItem(TEAM_LIST_KEY, JSON.stringify(teams));
+}
+
+function loadCurrentTeamId(){
+  const saved = String(localStorage.getItem(CURRENT_TEAM_KEY) || "").trim();
+  if(saved && teams.some(team => team.id === saved)) return saved;
+
+  const fallback = teams[0]?.id || DEFAULT_TEAM_ID;
+  localStorage.setItem(CURRENT_TEAM_KEY, fallback);
+  return fallback;
+}
+
+function getCurrentTeam(){
+  return teams.find(team => team.id === currentTeamId) || teams[0] || getDefaultTeams()[0];
+}
+
+function getTeamStorageKey(kind, teamId = currentTeamId){
+  return `${APP_PREFIX}:${teamId}:${kind}`;
+}
+
+function migrateLegacyDataIfNeeded(){
+  if(localStorage.getItem(LEGACY_MIGRATED_KEY)) return;
+
+  const legacyPlayers = localStorage.getItem(LEGACY_STORAGE_KEY);
+  const legacyOrder = localStorage.getItem(LEGACY_ORDER_STORAGE_KEY);
+
+  if(legacyPlayers && !localStorage.getItem(getTeamStorageKey("players", DEFAULT_TEAM_ID))){
+    localStorage.setItem(getTeamStorageKey("players", DEFAULT_TEAM_ID), legacyPlayers);
+  }
+
+  if(legacyOrder && !localStorage.getItem(getTeamStorageKey("battingOrder", DEFAULT_TEAM_ID))){
+    localStorage.setItem(getTeamStorageKey("battingOrder", DEFAULT_TEAM_ID), legacyOrder);
+  }
+
+  localStorage.setItem(LEGACY_MIGRATED_KEY, "1");
+}
+
+function generateTeamId(){
+  const random = Math.random().toString(36).slice(2, 8);
+  return `team_${Date.now().toString(36)}_${random}`;
+}
+
+function renderTeams(){
+  const select = document.getElementById("teamSelect");
+  if(!select) return;
+
+  select.innerHTML = "";
+  teams.forEach(team => {
+    const option = document.createElement("option");
+    option.value = team.id;
+    option.textContent = team.name;
+    select.appendChild(option);
+  });
+
+  select.value = currentTeamId;
+  updateTeamInfo();
+}
+
+function updateTeamInfo(){
+  const info = document.getElementById("teamInfo");
+  if(!info) return;
+
+  const team = getCurrentTeam();
+  info.textContent = `現在: ${team.name} / 選手 ${players.length}人 / オーダー ${order.length}人`;
+}
+
+function resetSelectionState(){
+  checkedPlayerIds.clear();
+  pendingSwapIndex = null;
+  pendingBattingSwapIndex = null;
+  selectedIndex = null;
+  stopYouTubePreview();
+  clearBadges();
+}
+
+function changeTeam(teamId){
+  if(!teams.some(team => team.id === teamId)) return;
+  if(teamId === currentTeamId) return;
+
+  savePlayers();
+  saveOrder();
+  currentTeamId = teamId;
+  localStorage.setItem(CURRENT_TEAM_KEY, currentTeamId);
+
+  players = loadPlayers();
+  order = loadOrder();
+  resetSelectionState();
+  clearForm();
+  renderTeams();
+  renderOrder();
+
+  if(players.length > 0){
+    selectPlayer(0);
+  }
+}
+
+function addTeam(){
+  const input = prompt("追加するチーム名を入力してください。", "");
+  if(input === null) return;
+
+  const name = String(input || "").trim();
+  if(!name){
+    alert("チーム名を入力してください。");
+    return;
+  }
+
+  const team = { id:generateTeamId(), name };
+  teams.push(team);
+  saveTeams();
+  changeTeam(team.id);
+}
+
+function renameTeam(){
+  const team = getCurrentTeam();
+  const input = prompt("チーム名を変更してください。", team.name);
+  if(input === null) return;
+
+  const name = String(input || "").trim();
+  if(!name){
+    alert("チーム名を入力してください。");
+    return;
+  }
+
+  team.name = name;
+  saveTeams();
+  renderTeams();
+}
+
+function deleteTeam(){
+  if(teams.length <= 1){
+    alert("チームは最低1つ必要です。");
+    return;
+  }
+
+  const team = getCurrentTeam();
+  if(!confirm(`${team.name} を削除しますか？このチームの選手データとオーダーも削除されます。`)) return;
+
+  localStorage.removeItem(getTeamStorageKey("players", team.id));
+  localStorage.removeItem(getTeamStorageKey("battingOrder", team.id));
+
+  teams = teams.filter(item => item.id !== team.id);
+  saveTeams();
+
+  currentTeamId = teams[0].id;
+  localStorage.setItem(CURRENT_TEAM_KEY, currentTeamId);
+
+  players = loadPlayers();
+  order = loadOrder();
+  resetSelectionState();
+  clearForm();
+  renderTeams();
+  renderOrder();
+
+  if(players.length > 0){
+    selectPlayer(0);
+  }
+}
+
+function sanitizeFilename(value){
+  const name = String(value || "team")
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .replace(/\s+/g, "_")
+    .trim();
+
+  return name || "team";
+}
+
 function generatePlayerId(){
   const random = Math.random().toString(36).slice(2, 9);
   return `p_${Date.now().toString(36)}_${random}`;
@@ -879,7 +1092,7 @@ function generatePlayerId(){
 
 function loadPlayers(){
   try{
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const data = JSON.parse(localStorage.getItem(getTeamStorageKey("players")) || "[]");
     return Array.isArray(data) ? data.map(normalizePlayer) : [];
   }catch(error){
     return [];
@@ -887,7 +1100,7 @@ function loadPlayers(){
 }
 
 function savePlayers(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
+  localStorage.setItem(getTeamStorageKey("players"), JSON.stringify(players));
 }
 
 function normalizePlayer(player){
@@ -908,7 +1121,7 @@ function normalizePlayer(player){
 
 function loadOrder(){
   try{
-    const data = JSON.parse(localStorage.getItem(ORDER_STORAGE_KEY) || "[]");
+    const data = JSON.parse(localStorage.getItem(getTeamStorageKey("battingOrder")) || "[]");
     if(!Array.isArray(data)) return [];
 
     return data
@@ -924,7 +1137,7 @@ function loadOrder(){
 }
 
 function saveOrder(){
-  localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(order));
+  localStorage.setItem(getTeamStorageKey("battingOrder"), JSON.stringify(order));
 }
 
 function cleanOrder(){
@@ -1007,6 +1220,7 @@ function renderList(){
   list.innerHTML = "";
 
   count.textContent = `登録 ${players.length}人 / 表示 ${filtered.length}人`;
+  updateTeamInfo();
 
   if(players.length === 0){
     list.innerHTML = "<div class='empty'>CSVを読み込むか、選手を追加してください。</div>";
@@ -1587,6 +1801,7 @@ function renderOrder(){
   const dhCount = order.filter(item => item.position === "DH").length;
 
   summary.textContent = `打線 ${order.length}/${MAX_ORDER}人 / 守備 ${fielders}/9人 / DH ${dhCount}人`;
+  updateTeamInfo();
 
   const duplicated = Object.entries(counts)
     .filter(([, count]) => count >= 2)
@@ -1671,7 +1886,7 @@ function renderOrder(){
     play.className = "mini";
     play.textContent = "▶";
     play.disabled = !getYouTubeVideoId(player.youtubeUrl);
-    play.title = play.disabled ? "YouTube設定がありません" : "15秒再生";
+    play.title = play.disabled ? "YouTube設定がありません" : "YouTubeで開く";
     play.onclick = () => playYouTubePreview(player.id);
 
     const setting = document.createElement("button");
@@ -1755,41 +1970,45 @@ function playYouTubePreview(playerId){
 
   stopYouTubePreview();
 
-  meta.textContent = `再生中: #${player.number || "-"} ${player.name} / ${formatSeconds(start)}〜${formatSeconds(end)}`;
-
   const watchUrl = buildYouTubeWatchUrl(videoId, start);
 
-  if(shouldOpenYouTubeDirectly()){
-    area.innerHTML = `
-      <div class="youtube-note">
-        SafariでローカルHTMLを開いているため、埋め込み再生ではError 153が出やすいです。YouTubeを別ウィンドウで開き、15秒後に閉じます。
-      </div>
-      <div class="youtube-fallback">
-        <a href="${watchUrl}" target="_blank">YouTubeで開く</a>
-      </div>
-    `;
-    box.classList.add("active");
-    openYouTubePreviewWindow(watchUrl);
-    youtubeStopTimer = setTimeout(stopYouTubePreview, 15000);
-    return;
-  }
-
-  const originParam = location.origin && location.origin !== "null"
-    ? `&origin=${encodeURIComponent(location.origin)}`
-    : "";
-  const src = `https://www.youtube.com/embed/${videoId}?start=${start}&end=${end}&autoplay=1&controls=1&playsinline=1&rel=0${originParam}`;
-
+  meta.textContent = `YouTubeで開く: #${player.number || "-"} ${player.name} / ${formatSeconds(start)}〜${formatSeconds(end)}目安`;
   area.innerHTML = `
-    <div class="youtube-frame-wrap">
-      <iframe src="${src}" title="YouTube preview" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    <div class="youtube-note">
+      Premiumを効かせやすくするため、アプリ内の埋め込み再生ではなくYouTube本体を開きます。
+      15秒で自動停止はできないので、再生後はYouTube側から戻ってください。
     </div>
     <div class="youtube-fallback">
-      <a href="${watchUrl}" target="_blank">Error 153が出る場合はYouTubeで開く</a>
+      <a href="${watchUrl}" target="_blank" rel="noopener">YouTubeで開く</a>
     </div>
   `;
-
   box.classList.add("active");
-  youtubeStopTimer = setTimeout(stopYouTubePreview, 15000);
+
+  openYouTubeExternal(watchUrl);
+
+  youtubeStopTimer = setTimeout(() => {
+    if(meta){
+      meta.textContent = `15秒経過: #${player.number || "-"} ${player.name}`;
+    }
+  }, 15000);
+}
+
+function openYouTubeExternal(url){
+  try{
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }catch(error){
+    try{
+      window.open(url, "_blank", "noopener");
+    }catch(innerError){
+      // 画面内のリンクから開けるので何もしない
+    }
+  }
 }
 
 function shouldOpenYouTubeDirectly(){
@@ -2185,7 +2404,8 @@ function importCsv(){
       renderOrder();
       selectPlayer(0);
 
-      alert(`${players.length}人を読み込みました。`);
+      renderTeams();
+      alert(`${getCurrentTeam().name} に ${players.length}人を読み込みました。`);
     }catch(error){
       console.error(error);
       alert("CSVの読み込み中にエラーが出ました。ファイル形式を確認してください。");
@@ -2226,7 +2446,7 @@ function exportCsv(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "defense_players.csv";
+  a.download = `${sanitizeFilename(getCurrentTeam().name)}_players.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -2234,6 +2454,7 @@ function exportCsv(){
 }
 
 initPositionInputs();
+renderTeams();
 renderList();
 renderOrder();
 clearForm();
