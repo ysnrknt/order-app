@@ -835,10 +835,9 @@ button.mini{
         </div>
 
         <div id="orderWarnings" class="order-warnings"></div>
-        <div id="youtubeBox" class="youtube-box">
+        <div id="youtubeBox" class="youtube-box" aria-hidden="true">
           <div id="youtubeMeta" class="youtube-meta"></div>
           <div id="youtubePlayerArea"></div>
-          <button type="button" class="sub" onclick="stopYouTubePreview()">表示を閉じる</button>
         </div>
         <div id="orderList" class="order-list"></div>
       </div>
@@ -1886,7 +1885,7 @@ function renderOrder(){
     play.className = "mini";
     play.textContent = "▶";
     play.disabled = !getYouTubeVideoId(player.youtubeUrl);
-    play.title = play.disabled ? "YouTube設定がありません" : "YouTubeで開く";
+    play.title = play.disabled ? "YouTube設定がありません" : "YouTubeを開く";
     play.onclick = () => playYouTubePreview(player.id);
 
     const setting = document.createElement("button");
@@ -1960,37 +1959,11 @@ function playYouTubePreview(playerId){
     return;
   }
 
-  const start = normalizeSeconds(player.youtubeStart);
-  const end = start + 15;
-  const box = document.getElementById("youtubeBox");
-  const meta = document.getElementById("youtubeMeta");
-  const area = document.getElementById("youtubePlayerArea");
-
-  if(!box || !meta || !area) return;
-
   stopYouTubePreview();
 
+  const start = normalizeSeconds(player.youtubeStart);
   const watchUrl = buildYouTubeWatchUrl(videoId, start);
-
-  meta.textContent = `YouTubeで開く: #${player.number || "-"} ${player.name} / ${formatSeconds(start)}〜${formatSeconds(end)}目安`;
-  area.innerHTML = `
-    <div class="youtube-note">
-      Premiumを効かせやすくするため、アプリ内の埋め込み再生ではなくYouTube本体を開きます。
-      15秒で自動停止はできないので、再生後はYouTube側から戻ってください。
-    </div>
-    <div class="youtube-fallback">
-      <a href="${watchUrl}" target="_blank" rel="noopener">YouTubeで開く</a>
-    </div>
-  `;
-  box.classList.add("active");
-
   openYouTubeExternal(watchUrl);
-
-  youtubeStopTimer = setTimeout(() => {
-    if(meta){
-      meta.textContent = `15秒経過: #${player.number || "-"} ${player.name}`;
-    }
-  }, 15000);
 }
 
 function openYouTubeExternal(url){
